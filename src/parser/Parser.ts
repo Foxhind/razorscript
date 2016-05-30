@@ -12,9 +12,11 @@ import RazorVariableAccess = require('../segments/RazorVariableAccess');
 import RazorMethodCall = require('../segments/RazorMethodCall');
 import RazorArrayAccess = require('../segments/RazorArrayAccess');
 import RazorArrayLiteral = require('../segments/RazorArrayLiteral');
+import RazorLabelStatement = require('../segments/RazorLabelStatement');
 import RazorLiteral = require('../segments/RazorLiteral');
 import RazorStatement = require('../segments/RazorStatement');
 import RazorIfStatement = require('../segments/RazorIfStatement');
+import RazorSwitchStatement = require('../segments/RazorSwitchStatement');
 import RazorForLoop = require('../segments/RazorForLoop');
 import RazorForEachLoop = require('../segments/RazorForEachLoop');
 import RazorVariableDeclaration = require('../segments/RazorVariableDeclaration');
@@ -27,7 +29,8 @@ import RazorSection = require('../segments/RazorSection');
 import RazorInlineExpression = require('../segments/RazorInlineExpression');
 import IParser = require('./IParser');
 
-var keywords: Array<string> = ['if', 'do', 'while', 'for', 'foreach'];
+var keywords: Array<string> = ['if', 'do', 'while', 'for', 'foreach',
+    'switch', 'case', 'default', 'break'];
 
 class Parser {
   private iterator: ITokenIterator;
@@ -425,6 +428,20 @@ class Parser {
     if (this.iterator.nowhitespace.peek.text === 'foreach') {
       return this.parseForEachLoop();
     }
+    if (this.iterator.nowhitespace.peek.text === 'switch') {
+      return this.parseSwitchStatement();
+    }
+    if (this.iterator.nowhitespace.peek.text === 'case') {
+      return this.parseLabelStatement();
+    }
+    if (this.iterator.nowhitespace.peek.text === 'default') {
+      return this.parseLabelStatement();
+    }
+    if (this.iterator.nowhitespace.peek.text === 'break') {
+      var statement = new RazorLiteral(this.iterator.nowhitespace.consume().text);
+      this.iterator.nowhitespace.consume(';');
+      return statement;
+    }
 
     var expression = this.parseRazorExpression();
     this.iterator.nowhitespace.consume(';');
@@ -455,6 +472,36 @@ class Parser {
     }
 
     return new RazorIfStatement(test, body, elseifStmt, elseStmt);
+  }
+
+  private parseSwitchStatement(): RazorSwitchStatement {
+    var expression: RazorExpression,
+        body: RazorBlock;
+
+    this.iterator.nowhitespace.consume('switch');
+    this.iterator.nowhitespace.consume('(');
+    expression = this.parseRazorExpression();
+    this.iterator.nowhitespace.consume(')');
+    body = this.parseRazorBlock();
+
+    return new RazorSwitchStatement(expression, body);
+  }
+
+  private parseLabelStatement(): RazorLabelStatement {
+    var condition: RazorExpression;
+
+    var label: string;
+    if (this.iterator.nowhitespace.peek.text === 'case') {
+      label = 'case';
+      this.iterator.nowhitespace.consume();
+      condition = this.parseRazorExpression();
+    } else {
+      label = this.iterator.nowhitespace.consume(TokenType.alphanumeric).text
+    }
+
+    this.iterator.nowhitespace.consume(':');
+
+    return new RazorLabelStatement(label, condition);
   }
 
   private parseVariableDeclaration(): RazorStatement {

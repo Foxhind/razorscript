@@ -4,11 +4,13 @@ import HtmlAttribute = require('../segments/HtmlAttribute');
 import Literal = require('../segments/Literal');
 import RazorBlock = require('../segments/RazorBlock');
 import RazorVariableAccess = require('../segments/RazorVariableAccess');
+import RazorLabelStatement = require('../segments/RazorLabelStatement');
 import RazorLiteral = require('../segments/RazorLiteral');
 import RazorArrayAccess = require('../segments/RazorArrayAccess');
 import RazorMethodCall = require('../segments/RazorMethodCall');
 import RazorStatement = require('../segments/RazorStatement');
 import RazorIfStatement = require('../segments/RazorIfStatement');
+import RazorSwitchStatement = require('../segments/RazorSwitchStatement');
 import RazorForLoop = require('../segments/RazorForLoop');
 import RazorForEachLoop = require('../segments/RazorForEachLoop');
 import RazorVariableDeclaration = require('../segments/RazorVariableDeclaration');
@@ -341,4 +343,35 @@ test('convert pascal casing to camel case for identifiers', function(){
 
   ok(/foo/.test(executeBody));
   ok(!/Foo/.test(executeBody));
+});
+
+test('razor switch(true) statement expression with default html', function() {
+  var view = transpile(// @switch(true){ default: <div /> }
+        new RazorSwitchStatement(
+          new RazorLiteral('true'),
+          new RazorBlock([
+            new RazorLabelStatement('default'),
+            new Html('div', '', ' ', true)
+          ])
+        )
+      ),
+      result = view.execute();
+  equal(result, '<div />');
+});
+
+test('razor switch(true) statement expression with html in case', function() {
+  var view = transpile(// @switch(true){ case true: <br />; break; default: <div /> }
+        new RazorSwitchStatement(
+          new RazorLiteral('true'),
+          new RazorBlock([
+            new RazorLabelStatement('case', new RazorLiteral('true')),
+            new Html('br', '', ' ', true),
+            new RazorLiteral('break'),
+            new RazorLabelStatement('default'),
+            new Html('div', '', ' ', true)
+          ])
+        )
+      ),
+      result = view.execute();
+  equal(result, '<br />');
 });

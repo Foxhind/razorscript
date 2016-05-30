@@ -9,9 +9,11 @@ import RazorVariableAccess = require('../segments/RazorVariableAccess');
 import RazorMethodCall = require('../segments/RazorMethodCall');
 import RazorArrayAccess = require('../segments/RazorArrayAccess');
 import RazorArrayLiteral = require('../segments/RazorArrayLiteral');
+import RazorLabelStatement = require('../segments/RazorLabelStatement');
 import RazorLiteral = require('../segments/RazorLiteral');
 import RazorStatement = require('../segments/RazorStatement');
 import RazorIfStatement = require('../segments/RazorIfStatement');
+import RazorSwitchStatement = require('../segments/RazorSwitchStatement');
 import RazorVariableDeclaration = require('../segments/RazorVariableDeclaration');
 import RazorBinaryExpression = require('../segments/RazorBinaryExpression');
 import RazorUnaryExpression = require('../segments/RazorUnaryExpression');
@@ -361,4 +363,63 @@ test('if statement with else if and else', function() {
 
   ok(!(elseifStmt.elseifStatement), 'did not expect an else if statement on the second if');
   ok(!!(elseifStmt.elseStatement), 'expected and else statement on the second if');
+});
+
+test('empty switch statement', function() {
+  var input = '@switch (true) { }',
+      it = new TokenIterator(input),
+      parser = new Parser(it),
+      output: Array<Segment>;
+
+  output = parser.parse();
+
+  var expression = (<RazorSwitchStatement>output[0]).expression;
+  ok(expression instanceof RazorLiteral, 'expected expression to be RazorLiteral');
+  equal((<RazorLiteral>expression).expression, 'true');
+});
+
+test('switch statement with label', function() {
+  var input = '@switch (true) { default: true; }',
+      it = new TokenIterator(input),
+      parser = new Parser(it),
+      output: Array<Segment>;
+
+  output = parser.parse();
+
+  var expression = (<RazorSwitchStatement>output[0]).expression;
+  ok(expression instanceof RazorLiteral, 'expected expression to be RazorLiteral');
+  equal((<RazorLiteral>expression).expression, 'true');
+
+  var code = (<RazorSwitchStatement>output[0]).body;
+  ok(code.statements[0] instanceof RazorLabelStatement, 'expected 1st statement to be RazorLabelStatement');
+  ok(code.statements[1] instanceof RazorLiteral, 'expected 2nd statement to be RazorLiteral');
+  equal((<RazorLiteral>code.statements[1]).expression, 'true');
+});
+
+test('switch statement with two cases and break', function() {
+  var input = '@switch (true) { case true: true; break; case false: false; }',
+      it = new TokenIterator(input),
+      parser = new Parser(it),
+      output: Array<Segment>;
+
+  output = parser.parse();
+
+  var expression = (<RazorSwitchStatement>output[0]).expression;
+  ok(expression instanceof RazorLiteral, 'expected expression to be RazorLiteral');
+  equal((<RazorLiteral>expression).expression, 'true');
+
+  var code = (<RazorSwitchStatement>output[0]).body;
+
+  var label1 = <RazorLabelStatement>code.statements[0];
+  var label2 = <RazorLabelStatement>code.statements[3];
+  ok(label1 instanceof RazorLabelStatement, 'expected 1st label to be RazorLabelStatement');
+  equal(label1.label, 'case');
+  equal((<RazorLiteral>label1.condition).expression, 'true');
+
+  ok(label2 instanceof RazorLabelStatement, 'expected 2nd label to be RazorLabelStatement');
+  equal(label2.label, 'case');
+  equal((<RazorLiteral>label2.condition).expression, 'false');
+
+  var breakLiteral = <RazorLiteral>code.statements[2];
+  equal(breakLiteral.expression, 'break');
 });

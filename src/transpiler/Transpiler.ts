@@ -8,12 +8,14 @@ import LiteralSegment = require('../segments/Literal');
 import RazorBlockSegment = require('../segments/RazorBlock');
 import RazorExpression = require('../segments/RazorExpression');
 import RazorVariableAccess = require('../segments/RazorVariableAccess');
+import RazorLabelStatement = require('../segments/RazorLabelStatement');
 import RazorLiteral = require('../segments/RazorLiteral');
 import RazorMethodCall = require('../segments/RazorMethodCall');
 import RazorArrayAccess = require('../segments/RazorArrayAccess');
 import RazorArrayLiteral = require('../segments/RazorArrayLiteral');
 import RazorStatement = require('../segments/RazorStatement');
 import RazorIfStatement = require('../segments/RazorIfStatement');
+import RazorSwitchStatement = require('../segments/RazorSwitchStatement');
 import RazorForLoop = require('../segments/RazorForLoop');
 import RazorForEachLoop = require('../segments/RazorForEachLoop');
 import RazorHelper = require('../segments/RazorHelper');
@@ -116,8 +118,12 @@ class Transpiler {
       this.transpileRazorExpression(<RazorExpression>segment);
     } else if (segment instanceof RazorIfStatement) {
       this.transpileRazorIfStatement(<RazorIfStatement>segment);
+    } else if (segment instanceof RazorSwitchStatement) {
+      this.transpileRazorSwitchStatement(<RazorSwitchStatement>segment);
     } else if (segment instanceof RazorBlockSegment) {
       this.transpileRazorBlock(<RazorBlockSegment>segment);
+    } else if (segment instanceof RazorLabelStatement) {
+      this.transpileRazorLabelStatement(<RazorLabelStatement>segment);
     } else if (segment instanceof LiteralSegment) {
       this.code.literal((<LiteralSegment>segment).value);
     } else if (segment instanceof RazorHelper) {
@@ -311,6 +317,28 @@ class Transpiler {
       this.transpileRazorBlock(segment.elseStatement);
       this.code.directCode('}');
     }
+  }
+
+  private transpileRazorSwitchStatement(segment: RazorSwitchStatement): void {
+    this.code.startCode();
+    this.code.directCode('switch (');
+    this.transpileRazorExpression(segment.expression);
+    this.code.directCode('){');
+
+    this.transpileRazorBlock(segment.body);
+
+    this.code.directCode('}');
+  }
+
+  private transpileRazorLabelStatement(segment: RazorLabelStatement): void {
+    this.code.startCode();
+    this.code.directCode(segment.label);
+
+    if (segment.condition) {
+      this.code.directCode(' ');
+      this.transpileRazorExpression(segment.condition);
+    }
+    this.code.directCode(':');
   }
 
   private transpileRazorForLoop(segment: RazorForLoop): void {
