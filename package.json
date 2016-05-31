@@ -11,7 +11,9 @@
     "typescript": "^1.0.1"
   },
   "scripts": {
-    "test": "make test"
+    "test": "make test",
+    "postinstall": "node node_modules/typescript/bin/tsc --allowUnreachableCode -m commonjs -t es5 --outDir bin src/**/*.ts",
+    "preuninstall": "rm -rf bin"
   },
   "author": "Matthew Smith",
   "license": "MIT",
